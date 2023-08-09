@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 from base_proxy import BaseProxy
 from base_scraper import BaseScraper
 
+from utils.get_proxy_info import *
+
 PROXY_URL = [
     'https://free-proxy-list.net/'
 ]
@@ -14,7 +16,7 @@ class FreeProxyList(BaseScraper):
     def __init__(self, use_proxy=False):
         super().__init__(use_proxy)
 
-    def get_free_proxy_list(url = PROXY_URL[0]):
+    def get_free_proxy_list(self, url = PROXY_URL[0]):
 
         response = requests.get(url)
 
@@ -24,15 +26,24 @@ class FreeProxyList(BaseScraper):
 
             page_content = BeautifulSoup(response.content,'html')
             text_area = page_content.find('textarea')
-            
             items = text_area.text.split('\n')
 
             for item in items :
                 try :
                     my_proxy = item.split(':')
-                    free_proxy_list.append(my_proxy[0]) 
+                    proxy_ip = my_proxy[0]
+                    try :
+                        proxy_port = my_proxy[1]
+                    except :
+                        proxy_port = 'N/A' 
+                    proxy_location = get_proxy_location(proxy_ip)   
+                    proxy_instance = BaseProxy(proxy_ip, proxy_port, proxy_location)
+                    free_proxy_list.append(proxy_instance) 
                 except :
                     pass
+             
+
+             
                 
                 #print(free_proxy_list)
             return free_proxy_list
@@ -45,8 +56,8 @@ class FreeProxyList(BaseScraper):
 #print(get_free_proxy_list())        
 
 
-data = requests.get('https://www.paginegialle.it/ricerca/software/Pordenone')
+"""data = requests.get('https://www.paginegialle.it/ricerca/software/Pordenone')
 
 soup = BeautifulSoup(data.content,'lxml')
 
-print(soup)
+print(soup)"""

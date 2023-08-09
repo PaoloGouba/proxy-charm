@@ -18,7 +18,7 @@ class BaseScraper:
             try:
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()  # Solleva un'eccezione se la richiesta non ha successo
-                return response.text
+                return response.content
             except requests.exceptions.RequestException as e:
                 print(f"Errore durante la richiesta: {e}")
                 return None
