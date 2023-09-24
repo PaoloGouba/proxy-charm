@@ -1,5 +1,5 @@
 # proxy-charm
-Your best free proxy generator, scraping the best free proxy sites
+Your best free proxy generator, agregate proxies from the best free proxy sites
 
 
 1. https://free-proxy-list.net/
