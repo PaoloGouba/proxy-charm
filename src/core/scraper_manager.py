@@ -1,11 +1,11 @@
-#from scrapers.site1_scraper import Site1Scraper
+from scrapers.proxy_scrape import ProxyScrape
 from scrapers.free_proxy_list import FreeProxyListScraper
 
 class ScraperManager:
     def __init__(self):
         # Registra tutti gli scraper disponibili
         self.scrapers = [
-            #Site1Scraper(),
+            ProxyScrape(),
             FreeProxyListScraper(),
         ]
 
