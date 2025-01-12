@@ -1,4 +1,6 @@
 rejected_proxies.txt
+run_proxycharm.sh
+scheduler.plist
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
