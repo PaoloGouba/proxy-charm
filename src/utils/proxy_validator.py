@@ -83,8 +83,8 @@ class ProxyTester:
 
 # Esempio di utilizzo
 if __name__ == "__main__":
-    proxy_ip = "156.228.79.170"
-    proxy_port = "3128"
+    proxy_ip = "129.146.166.74"
+    proxy_port = "8712"
 
     tester = ProxyTester(proxy_ip, proxy_port)
     result = tester.test_proxy()
