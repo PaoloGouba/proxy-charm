@@ -1,68 +1,44 @@
 import requests
 from bs4 import BeautifulSoup
+from scrapers.base_scraper import BaseScraper
 
-from base_proxy import BaseProxy
-from base_scraper import BaseScraper
+class FreeProxyListScraper(BaseScraper):
+    def __init__(self):
+        super().__init__()
 
-#from utils.get_proxy_info import *
+    @property
+    def name(self):
+        return "FreeProxyListScraper"
 
-PROXY_URL = [
-    'https://free-proxy-list.net/'
-]
+    def fetch_proxies(self):
+        """
+        Scarica e analizza le proxy da https://free-proxy-list.net/
+        """
+        url = "https://free-proxy-list.net/"
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()  # Solleva un'eccezione per errori HTTP
 
-#get proxies from table in https://free-proxy-list.net/
+            # Parsing HTML con BeautifulSoup
+            soup = BeautifulSoup(response.content, 'html.parser')
+            table = soup.find("table", {"class": "table table-striped table-bordered"})
 
-class FreeProxyList(BaseScraper):
-    def __init__(self, use_proxy=False):
-        super().__init__(use_proxy)
+            # Verifica se la tabella esiste
+            if not table:
+                print(f"Errore: Tabella proxy non trovata nella pagina {url}")
+                return []
 
-    def get_free_proxy_list(self, url = PROXY_URL[0]):
+            # Estrai le righe dalla tabella
+            rows = table.find_all("tr")[1:]  # Ignora l'intestazione della tabella
+            proxies = []
+            for row in rows:
+                columns = row.find_all("td")
+                if len(columns) >= 2:
+                    proxy_ip = columns[0].text.strip()
+                    proxy_port = columns[1].text.strip()
+                    proxies.append({"ip": proxy_ip, "port": proxy_port})
+            return proxies
 
-        response = requests.get(url)
-
-        if response.status_code == 200:
-
-            free_proxy_list = []
-
-            page_content = BeautifulSoup(response.content,'html.parser')
-            text_area = page_content.find('textarea')
-            items = text_area.text.split('\n')
-
-            for item in items :
-                try :
-                    my_proxy = item.split(':')
-                    proxy_ip = my_proxy[0]
-                    try :
-                        proxy_port = my_proxy[1]
-                    except :
-                        proxy_port = 'N/A' 
-                    #proxy_location = get_proxy_location(proxy_ip)
-                    proxy_location = "get_proxy_location(proxy_ip)"
-                    proxy_instance = BaseProxy(proxy_ip, proxy_port, proxy_location)
-                    free_proxy_list.append(proxy_instance) 
-                except :
-                    pass
-             
-
-             
-                
-                #print(free_proxy_list)
-            return free_proxy_list
-        
-        else :
-            print("Errore nella richiesta. Codice di stato:", response.status_code)
-            
-            
-
-scraper = FreeProxyList()
-
-lista = scraper.get_free_proxy_list()
-for i in lista :        
-    print(i.url)        
-
-
-"""data = requests.get('https://www.paginegialle.it/ricerca/software/Pordenone')
-
-soup = BeautifulSoup(data.content,'lxml')
-
-print(soup)"""
+        except requests.RequestException as e:
+            print(f"Errore durante il download delle proxy: {e}")
+            return []

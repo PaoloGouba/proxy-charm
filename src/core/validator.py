@@ -15,10 +15,9 @@ class ProxyTester:
         try:
             response = requests.get(self.TEST_URL, proxies=self.proxy, timeout=5)
             if response.status_code == 200:
-                print(f"Connettività OK: {response.json()}")
                 return True
-        except requests.exceptions.RequestException as e:
-            print(f"Errore di connettività: {e}")
+        except requests.exceptions.RequestException:
+            pass
         return False
 
     def test_speed(self):
@@ -27,11 +26,9 @@ class ProxyTester:
             start_time = time.time()
             response = requests.get(self.TEST_URL, proxies=self.proxy, timeout=5)
             if response.status_code == 200:
-                latency = time.time() - start_time
-                print(f"Velocità OK: {latency:.2f} secondi")
-                return latency
-        except requests.exceptions.RequestException as e:
-            print(f"Errore di velocità: {e}")
+                return time.time() - start_time
+        except requests.exceptions.RequestException:
+            pass
         return None
 
     def test_anonymity(self):
@@ -40,40 +37,32 @@ class ProxyTester:
             response = requests.get(self.TEST_URL, proxies=self.proxy, timeout=5)
             if response.status_code == 200:
                 visible_ip = response.json().get("origin")
-                print(f"IP visibile tramite proxy: {visible_ip}")
                 return visible_ip
-        except requests.exceptions.RequestException as e:
-            print(f"Errore di anonimato: {e}")
+        except requests.exceptions.RequestException:
+            pass
         return None
 
     def test_proxy(self, repetitions=3):
         """Esegue tutti i test per il proxy."""
-        print(f"\nTesting proxy: {self.proxy['http']}")
-
         # Test connettività
         if not self.test_connectivity():
-            print("Proxy non raggiungibile.")
             return {"status": "bad", "reason": "connectivity"}
 
         # Test velocità (media su più tentativi)
         latencies = []
         for _ in range(repetitions):
             latency = self.test_speed()
-            if latency:
+            if latency is not None:
                 latencies.append(latency)
             else:
-                print("Errore durante il test di velocità.")
                 return {"status": "bad", "reason": "speed"}
         avg_latency = sum(latencies) / len(latencies)
-        print(f"Latenza media: {avg_latency:.2f} secondi")
 
         # Test anonimato
         visible_ip = self.test_anonymity()
         if not visible_ip:
-            print("Errore durante il test di anonimato.")
             return {"status": "bad", "reason": "anonymity"}
 
-        print("Proxy test completato con successo.")
         return {
             "status": "good",
             "average_latency": avg_latency,
@@ -81,11 +70,24 @@ class ProxyTester:
         }
 
 
-# Esempio di utilizzo
-if __name__ == "__main__":
-    proxy_ip = "129.146.166.74"
-    proxy_port = "8712"
+def validate_proxies(proxies, repetitions=3):
+    """
+    Valida una lista di proxy e restituisce quelle valide con i dettagli.
+    """
+    valid_proxies = []
+    for proxy in proxies:
+        tester = ProxyTester(proxy["ip"], proxy["port"])
+        result = tester.test_proxy(repetitions=repetitions)
 
-    tester = ProxyTester(proxy_ip, proxy_port)
-    result = tester.test_proxy()
-    print("\nRisultato del test:", result)
+        if result["status"] == "good":
+            proxy_details = {
+                "ip": proxy["ip"],
+                "port": proxy["port"],
+                "latency": result["average_latency"],
+                "visible_ip": result["visible_ip"],
+            }
+            valid_proxies.append(proxy_details)
+        else:
+            print(f"Proxy scartata: {proxy['ip']}:{proxy['port']} - Motivo: {result['reason']}")
+
+    return valid_proxies
