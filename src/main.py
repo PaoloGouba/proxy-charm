@@ -1,16 +1,22 @@
-from data.data_extractor import DataExtractor
-
-def main():
-    data_extractor = DataExtractor()
-
-    # Altri dettagli del tuo script di scraping...
-    
-    data_extractor.add_data("Site1", site1_data)
-    data_extractor.add_data("Site2", site2_data)
-
-    data_extractor.to_xml()
-    data_extractor.to_json()
-    data_extractor.to_csv()
+from core.scraper_manager import ScraperManager
+from core.validator import validate_proxies
+from core.storage import save_proxies_to_file
+import os
 
 if __name__ == "__main__":
-    main()
+    # Crea la cartella output se non esiste
+    os.makedirs("output", exist_ok=True)
+
+    # Esegui il gestore degli scraper
+    scraper_manager = ScraperManager()
+
+    print("Fetching proxies from all sources...")
+    all_proxies = scraper_manager.run_all_scrapers()
+
+    print("Validating proxies...")
+    valid_proxies = validate_proxies(all_proxies)
+
+    print(f"Found {len(valid_proxies)} valid proxies. Saving to file...")
+    save_proxies_to_file(valid_proxies)
+
+    print("Done!")
