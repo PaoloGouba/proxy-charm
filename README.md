@@ -1,57 +1,123 @@
 # ProxyCharm
 
-ProxyCharm is an application for collecting and testing free proxies from various online sources, using a professional proxy provider to perform the scraping requests.
+**ProxyCharm** is a Python-based tool designed to fetch, validate, and save working proxies. It uses modular scraping and validation to ensure reliable results and offers extensibility for adding new proxy sources.
 
-## Usage Disclaimer
+---
 
-- **Limited Liability**: ProxyCharm is designed to collect and test proxies that can be used for web scraping purposes. We do not assume any responsibility for the use of the proxies or the data obtained through the application. Users are responsible for complying with local laws, privacy regulations, and the terms of service of the websites they scrape.
-  
-- **Exclusive Use for Scraping**: Users must use ProxyCharm solely for collecting data via proxies and not for transmitting data to external websites without proper authorization. Any use of ProxyCharm for purposes other than scraping is prohibited.
+## Features
 
-- **Security Limitations**: We are not responsible for any damages caused by the use of free proxies collected through ProxyCharm. We do not guarantee that proxies will always be available, secure, or fast. Users must be aware of the risks associated with using free proxies and must always test and validate proxies before using them for large-scale scraping.
+- Fetch proxies from multiple sources using modular scrapers.
+- Validate proxies for:
+  - Connectivity.
+  - Speed.
+  - Anonymity.
+- Multi-threaded validation for faster performance.
+- Save valid proxies to a `.txt` file for easy use.
+- Extensible by adding custom scrapers.
 
-- **Data Protection**: We are not liable for any privacy or security breaches related to the use of these proxies. Users must refrain from sending sensitive information through proxies obtained with ProxyCharm, such as personal data or financial information.
+---
 
-- **Compliance with Laws**: Users must use ProxyCharm in compliance with all applicable local laws, including those relating to privacy, data protection, and intellectual property rights.
+## Requirements
 
-## How It Works
+- **Python**: 3.8 or higher
+- **Dependencies**:
+  - `requests`
+  - `beautifulsoup4`
+  - `concurrent.futures` (standard library)
 
-1. **Proxy Collection**: ProxyCharm collects proxies from verified online sources, testing each proxy to determine its speed, stability, and availability.
-2. **Proxy Testing**: Once collected, the proxies are tested to check if they work, their latency, and support for the required protocols.
-3. **Proxy Management**: Working proxies are saved in a local database and can be used for scraping or other operations that require anonymity.
+Install required packages:
+```bash
+pip install -r requirements.txt
+```
+How to Use
+Clone the repository:
 
-## Installation
+```bash
+git clone https://github.com/yourusername/proxycharm.git
+cd proxycharm
+Run the main script:
+```
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/ProxyCharm.git
-    ```
-2. 
-3. 
+```bash
+Copier le code
+python main.py
+```
+
+Check the output:
+
+Valid proxies are saved in: output/proxies.txt
+Rejected proxies (for debugging) are saved in: rejected_proxies.txt
+
+## Adding New Scrapers
+You can contribute by adding new scrapers to fetch proxies from additional sources. Follow these steps:
+
+1. Create a New Scraper
+Add a new Python file in the scrapers directory.
+Inherit from the BaseScraper class to ensure compatibility.
+Example:
+
+```python
+import requests
+from bs4 import BeautifulSoup
+from scrapers.base_scraper import BaseScraper
+
+class ExampleScraper(BaseScraper):
+    @property
+    def name(self):
+        return "ExampleScraper"
+
+    def fetch_proxies(self):
+        url = "https://example.com/proxies"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        proxies = []
+
+        # Extract proxies from the page
+        for row in soup.find_all("tr"):
+            columns = row.find_all("td")
+            if len(columns) >= 2:
+                ip = columns[0].text.strip()
+                port = columns[1].text.strip()
+                proxies.append({"ip": ip, "port": port})
+
+        return proxies
+```        
+2. Register the Scraper
+Add your scraper to the ScraperManager in core/scraper_manager.py.
+Example:
+
+```python
+from scrapers.example_scraper import ExampleScraper
+
+class ScraperManager:
+    def __init__(self):
+        self.scrapers = [
+            ExampleScraper(),
+            # Other scrapers
+        ]
+```        
+3. Test the Scraper
+Run the main script to verify your scraper:
+
+```bash
+python main.py
+```
+## Contributions
+We welcome contributions to improve ProxyCharm! You can contribute by:
+
+Adding new scrapers for additional proxy sources.
+Optimizing the validation process.
+Reporting and fixing bugs.
+Improving documentation.
+Feel free to fork the repository and submit a pull request!
+
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+Enjoy using ProxyCharm! 🚀
 
 
-## Licence
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-### Key Points:
-1. **Usage Disclaimer**: Clearly indicates that the tool is for scraping purposes only, and outlines the user's responsibility for following relevant laws and terms of service.
-2. **Security Limitations**: Users are warned about the risks of using free proxies and the lack of guarantees.
-3. **Compliance**: Emphasizes the need to comply with local regulations.
-4. **Installation Instructions**: Clear, step-by-step setup guide for the project.
-5. **Contributing Section**: Encourages contributions via pull requests.
-6. **License**: Optionally, include a license (like MIT) for legal clarity.
 
 
-## Credits :
 
-### Providers
 
-- https://free-proxy-list.net/
-- https://openproxy.space/list (https://openproxy.space/list/http, https://openproxy.space/list/socks4, https://openproxy.space/list/socks5)
-- www.sslproxies.org
-- www.freeproxy.world
-
-### Technologies
-
-1. BeautifoulSoup
-2. ScrapeIO API
