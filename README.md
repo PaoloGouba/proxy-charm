@@ -35,8 +35,9 @@ Clone the repository:
 ```bash
 git clone https://github.com/yourusername/proxycharm.git
 cd proxycharm
-Run the main script:
 ```
+
+Run the main script:
 
 ```bash
 Copier le code
