@@ -10,6 +10,15 @@
             <string>/Users/paologouba/Documents/Paolo/Goals/proxy-charm/run_proxycharm.sh</string>
         </array>
 
+        <key>WorkingDirectory</key>
+        <string>/Users/paologouba/Documents/Paolo/Goals/proxy-charm</string>
+
+        <key>StandardOutPath</key>
+        <string>/Users/paologouba/Documents/Paolo/Goals/proxy-charm/output.log</string>
+
+        <key>StandardErrorPath</key>
+        <string>/Users/paologouba/Documents/Paolo/Goals/proxy-charm/error.log</string>
+
         <key>StartCalendarInterval</key>
         <dict>
             <key>Hour</key>
