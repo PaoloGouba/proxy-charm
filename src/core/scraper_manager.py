@@ -1,4 +1,4 @@
-from scrapers.site1_scraper import Site1Scraper
+#from scrapers.site1_scraper import Site1Scraper
 from scrapers.free_proxy_list import FreeProxyListScraper
 
 class ScraperManager:
