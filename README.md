@@ -40,7 +40,6 @@ cd proxycharm
 Run the main script:
 
 ```bash
-Copier le code
 python main.py
 ```
 
