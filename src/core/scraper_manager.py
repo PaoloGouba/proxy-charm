@@ -1,5 +1,7 @@
 from scrapers.proxy_scrape import ProxyScrape
 from scrapers.free_proxy_list import FreeProxyListScraper
+from scrapers.proxifly import ProxyFly
+
 
 class ScraperManager:
     def __init__(self):
@@ -7,6 +9,7 @@ class ScraperManager:
         self.scrapers = [
             ProxyScrape(),
             FreeProxyListScraper(),
+            ProxyFly(),
         ]
 
     def run_all_scrapers(self):
