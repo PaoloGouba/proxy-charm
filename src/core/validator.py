@@ -16,7 +16,7 @@ class ProxyTester:
             "https": f"http://{proxy_ip}:{proxy_port}",
         }
 
-    def test_connectivity(self, timeout=3):
+    def test_connectivity(self, timeout=5):
         """
         Verifica se il proxy è raggiungibile con un timeout breve.
         """
@@ -29,7 +29,7 @@ class ProxyTester:
                 continue
         return False
 
-    def test_speed(self, timeout=5):
+    def test_speed(self, timeout=7):
         """
         Misura il tempo di risposta del proxy con un timeout ottimizzato.
         """
@@ -60,13 +60,13 @@ class ProxyTester:
         Esegue tutti i test per il proxy con timeout ottimizzati.
         """
         # Test connettività (timeout breve)
-        if not self.test_connectivity(timeout=3):
+        if not self.test_connectivity(timeout=5):
             return {"status": "bad", "reason": "connectivity"}
 
         # Test velocità (media su più tentativi)
         latencies = []
         for _ in range(repetitions):
-            latency = self.test_speed(timeout=5)
+            latency = self.test_speed(timeout=7)
             if latency is not None:
                 latencies.append(latency)
         if len(latencies) < repetitions // 2:  # Almeno metà dei tentativi devono riuscire
