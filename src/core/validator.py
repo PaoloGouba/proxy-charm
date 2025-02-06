@@ -66,7 +66,7 @@ class ProxyTester:
         # Test velocità (media su più tentativi)
         latencies = []
         for _ in range(repetitions):
-            latency = self.test_speed(timeout=7)
+            latency = self.test_speed(timeout=10)
             if latency is not None:
                 latencies.append(latency)
         if len(latencies) < repetitions // 2:  # Almeno metà dei tentativi devono riuscire
