@@ -60,7 +60,7 @@ class ProxyTester:
         Esegue tutti i test per il proxy con timeout ottimizzati.
         """
         # Test connettività (timeout breve)
-        if not self.test_connectivity(timeout=5):
+        if not self.test_connectivity(timeout=7):
             return {"status": "bad", "reason": "connectivity"}
 
         # Test velocità (media su più tentativi)
