@@ -4,22 +4,25 @@ from core.storage import save_proxies_to_file
 import os
 
 if __name__ == "__main__":
-    # Crea la cartella output se non esiste
     os.makedirs("output", exist_ok=True)
 
-    # Esegui il gestore degli scraper
-    scraper_manager = ScraperManager()
+    # scraper paralleli
+    scraper_manager = ScraperManager(max_workers=3)
 
     print("Fetching proxies from all sources...")
     all_proxies = scraper_manager.run_all_scrapers()
     print(f"Fetched {len(all_proxies)} proxies.")
 
-    # Validazione delle proxy con multi-threading
+    # validazione aggressiva e rapida
     print("Validating proxies...")
-    valid_proxies = validate_proxies(all_proxies, repetitions=3, max_threads=20)
+    valid_proxies = validate_proxies(
+        all_proxies,
+        repetitions=1,     # 1 basta; porta a 2 solo se vuoi più confidenza
+        max_threads=80,    # I/O-bound
+        save_rejected=False
+    )
     print(f"Found {len(valid_proxies)} valid proxies.")
 
-    # Salvataggio delle proxy valide
     print("Saving valid proxies to file...")
     save_proxies_to_file(valid_proxies)
     print("Done!")

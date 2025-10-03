@@ -2,139 +2,98 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import time
 
-
 class ProxyTester:
-    TEST_URLS = [
-        "https://httpbin.org/ip",
-        "https://icanhazip.com/",
-        "https://ipinfo.io/ip"
-    ]
+    # Primo endpoint super-leggero
+    PRIMARY_URL = "https://icanhazip.com/"
+    # Secondario solo in fallback
+    SECONDARY_URL = "https://httpbin.org/ip"
 
-    def __init__(self, proxy_ip, proxy_port):
+    def __init__(self, proxy_ip, proxy_port, session: requests.Session | None = None):
         self.proxy = {
             "http": f"http://{proxy_ip}:{proxy_port}",
             "https": f"http://{proxy_ip}:{proxy_port}",
         }
+        self.session = session or requests.Session()
+        # timeouts separati: (connect, read)
+        self.connect_timeout = 3
+        self.read_timeout = 5
 
-    def test_connectivity(self, timeout=7):
-        """
-        Verifica se il proxy è raggiungibile con un timeout breve.
-        """
-        for url in self.TEST_URLS:
-            try:
-                response = requests.get(url, proxies=self.proxy, timeout=timeout)
-                if response.status_code == 200:
-                    return True
-            except requests.exceptions.RequestException:
-                continue
-        return False
+    def _get(self, url: str, timeout=None):
+        to = timeout or (self.connect_timeout, self.read_timeout)
+        return self.session.get(url, proxies=self.proxy, timeout=to)
 
-    def test_speed(self, timeout=10):
-        """
-        Misura il tempo di risposta del proxy con un timeout ottimizzato.
-        """
+    def test_once(self):
+        # Prova PRIMARY
         try:
-            start_time = time.time()
-            response = requests.get(self.TEST_URLS[0], proxies=self.proxy, timeout=timeout)
-            if response.status_code == 200:
-                return time.time() - start_time
-        except requests.exceptions.RequestException:
+            r = self._get(self.PRIMARY_URL)
+            if r.status_code == 200 and r.text.strip():
+                return True, r.text.strip()
+        except requests.RequestException:
             pass
-        return None
 
-    def test_anonymity(self, timeout=5):
-        """
-        Verifica se il proxy nasconde correttamente l'indirizzo IP.
-        """
+        # Fallback SECONDARY
         try:
-            response = requests.get(self.TEST_URLS[0], proxies=self.proxy, timeout=timeout)
-            if response.status_code == 200:
-                visible_ip = response.json().get("origin")
-                return visible_ip
-        except requests.exceptions.RequestException:
+            r = self._get(self.SECONDARY_URL)
+            if r.status_code == 200:
+                return True, r.text[:64]
+        except requests.RequestException:
             pass
-        return None
 
-    def test_proxy(self, repetitions=3):
-        """
-        Esegue tutti i test per il proxy con timeout ottimizzati.
-        """
-        # Test connettività (timeout breve)
-        if not self.test_connectivity(timeout=7):
-            return {"status": "bad", "reason": "connectivity"}
-
-        # Test velocità (media su più tentativi)
-        latencies = []
-        for _ in range(repetitions):
-            latency = self.test_speed(timeout=10)
-            if latency is not None:
-                latencies.append(latency)
-        if len(latencies) < repetitions // 2:  # Almeno metà dei tentativi devono riuscire
-            return {"status": "bad", "reason": "speed"}
-        avg_latency = sum(latencies) / len(latencies)
-
-        # Test anonimato
-        visible_ip = self.test_anonymity(timeout=5)
-        if visible_ip is None:
-            return {
-                "status": "warning",
-                "average_latency": avg_latency,
-                "visible_ip": None,
-            }
-
-        return {
-            "status": "good",
-            "average_latency": avg_latency,
-            "visible_ip": visible_ip,
-        }
+        return False, None
 
 
-def validate_proxies(proxies, repetitions=3, save_rejected=True, max_threads=10):
+
+def validate_proxies(proxies, repetitions: int = 1, max_threads: int = 80, save_rejected: bool = False):
     """
-    Valida una lista di proxy utilizzando multi-threading e salva i risultati.
+    Valida una lista di proxy più rapidamente:
+    - Dedup già fatto a monte
+    - Early-exit: 1 test basta; opzionale 2° test di conferma
+    - Timeout aggressivi
+    - Meno stampa, più throughput
     """
-    valid_proxies = []
-    rejected_proxies = []
+    if not proxies:
+        return []
 
-    def process_proxy(proxy):
-        """
-        Testa una singola proxy e restituisce il risultato.
-        """
-        tester = ProxyTester(proxy["ip"], proxy["port"])
-        return proxy, tester.test_proxy(repetitions=repetitions)
+    # session condivisa per tenere vivo DNS/TLS quando possibile
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_connections=200, pool_maxsize=200, max_retries=0)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
 
-    with ThreadPoolExecutor(max_threads) as executor:
-        futures = [executor.submit(process_proxy, proxy) for proxy in proxies]
+    def _task(p):
+        tester = ProxyTester(p["ip"], p["port"], session=session)
+        ok, info = tester.test_once()
+        if not ok:
+            return ("bad", p, "connect/timeout")
+        if repetitions > 1:
+            # opzionale: una seconda conferma molto rapida
+            ok2, _ = tester.test_once()
+            if not ok2:
+                return ("bad", p, "unstable")
+        return ("good", p, info)
 
-        for future in as_completed(futures):
-            proxy, result = future.result()
+    # limita thread a qualcosa di sensato
+    workers = min(max_threads, max(8, len(proxies)))
+    valid, rejected = [], []
 
-            if result["status"] == "good":
-                proxy_details = {
-                    "ip": proxy["ip"],
-                    "port": proxy["port"],
-                    "latency": result["average_latency"],
-                    "visible_ip": result["visible_ip"],
-                }
-                valid_proxies.append(proxy_details)
-            elif result["status"] == "warning":
-                print(f"Proxy accettata con avviso: {proxy['ip']}:{proxy['port']} (senza anonimato completo)")
-                proxy_details = {
-                    "ip": proxy["ip"],
-                    "port": proxy["port"],
-                    "latency": result["average_latency"],
-                    "visible_ip": None,
-                }
-                valid_proxies.append(proxy_details)
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futures = [ex.submit(_task, p) for p in proxies]
+        done = 0
+        for fut in as_completed(futures):
+            status, proxy, info = fut.result()
+            if status == "good":
+                valid.append({"ip": proxy["ip"], "port": proxy["port"]})
             else:
-                print(f"Proxy scartata: {proxy['ip']}:{proxy['port']} - Motivo: {result['reason']}")
-                rejected_proxies.append(proxy)
+                rejected.append(proxy)
+            done += 1
+            if done % 250 == 0:
+                print(f"[VALIDATE] Progress {done}/{len(proxies)} — good:{len(valid)}")
 
-    # Salva le proxy scartate in un file
-    if save_rejected and rejected_proxies:
-        with open("rejected_proxies.txt", "w") as file:
-            for proxy in rejected_proxies:
-                file.write(f"{proxy['ip']}:{proxy['port']}\n")
-        print(f"Proxy scartate salvate in 'rejected_proxies.txt'.")
+    if save_rejected and rejected:
+        with open("rejected_proxies.txt", "w") as f:
+            for p in rejected:
+                f.write(f"{p['ip']}:{p['port']}\n")
+        print("[INFO] rejected_proxies.txt scritto")
 
-    return valid_proxies
+    print(f"[RESULT] Valid: {len(valid)} / Total: {len(proxies)}")
+    return valid
